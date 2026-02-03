@@ -79,5 +79,8 @@
                      (getenv* "AWS_REGION")
                      (ini-get creds profile "region")
                      (ini-get config profile "region")
-                     "us-east-1")))
-    (values access-key secret-key region)))
+                     "us-east-1"))
+         ;; Resolve session token: env -> credentials file
+         (token (or (getenv* "AWS_SESSION_TOKEN")
+                    (ini-get creds profile "aws_session_token"))))
+    (values access-key secret-key region token)))

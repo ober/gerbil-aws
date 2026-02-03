@@ -16,11 +16,12 @@
 (export ec2-client ec2-client?
         ec2-client-endpoint ec2-client-access-key
         ec2-client-secret-key ec2-client-region
+        ec2-client-token
         EC2Client
         EC2ClientError ec2-client-error?
         ec2-request ec2-action ec2-action/items ec2-action/hash)
 
-(defstruct ec2-client (endpoint access-key secret-key region)
+(defstruct ec2-client (endpoint access-key secret-key region token)
   final: #t)
 
 (deferror-class (EC2ClientError Error) () ec2-client-error?)
@@ -40,19 +41,21 @@
        profile: (profile #f)
        access-key: (access-key #f)
        secret-key: (secret-key #f)
-       region: (region #f))
-  (let-values (((resolved-access-key resolved-secret-key resolved-region)
+       region: (region #f)
+       token: (token #f))
+  (let-values (((resolved-access-key resolved-secret-key resolved-region resolved-token)
                 (aws-resolve-credentials profile)))
     (let ((access-key (or access-key resolved-access-key))
           (secret-key (or secret-key resolved-secret-key))
           (region (or region resolved-region))
+          (token (or token resolved-token))
           (endpoint (or endpoint
                         (string-append "ec2." (or region resolved-region) ".amazonaws.com"))))
       (unless access-key
         (raise-ec2-error EC2Client "Must provide access key" "access-key"))
       (unless secret-key
         (raise-ec2-error EC2Client "Must provide secret key" "secret-key"))
-      (make-ec2-client endpoint access-key secret-key region))))
+      (make-ec2-client endpoint access-key secret-key region token))))
 
 ;; Make a signed POST request to the EC2 API
 ;; params is an alist of (key . value) pairs
@@ -70,6 +73,9 @@
            (headers [["Host" :: host]
                      ["x-amz-date" :: ts]
                      ["Content-Type" :: "application/x-www-form-urlencoded; charset=utf-8"]])
+           (headers (if client.token
+                      (append headers [["X-Amz-Security-Token" :: client.token]])
+                      headers))
            (creq (aws4-canonical-request
                    verb: 'POST
                    uri: "/"
