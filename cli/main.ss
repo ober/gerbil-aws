@@ -20,6 +20,9 @@
         :gerbil-aws/ec2/nat-gateways
         :gerbil-aws/ec2/tags
         :gerbil-aws/ec2/regions
+        :gerbil-aws/s3/api
+        :gerbil-aws/s3/buckets
+        :gerbil-aws/s3/objects
         :gerbil-aws/cli/format)
 (export main)
 
@@ -60,6 +63,11 @@
 (def (make-client opt)
   (let-hash opt
     (EC2Client profile: .?profile region: .?region)))
+
+;; Create S3 client from CLI options hash
+(def (make-s3-client* opt)
+  (let-hash opt
+    (S3Client profile: .?profile region: .?region)))
 
 ;;; ---- Command Definitions ----
 
@@ -624,6 +632,108 @@
     (flag 'all "--all"
       help: "Include all availability zones")))
 
+;; S3 Buckets
+(def s3-list-buckets-cmd
+  (command 's3-list-buckets
+    help: "List S3 buckets"
+    profile-opt region-opt output-opt))
+
+(def s3-create-bucket-cmd
+  (command 's3-create-bucket
+    help: "Create an S3 bucket"
+    profile-opt region-opt output-opt
+    (option 'bucket "--bucket" "-b"
+      help: "Bucket name (required)")))
+
+(def s3-delete-bucket-cmd
+  (command 's3-delete-bucket
+    help: "Delete an S3 bucket"
+    profile-opt region-opt output-opt
+    (option 'bucket "--bucket" "-b"
+      help: "Bucket name (required)")))
+
+(def s3-head-bucket-cmd
+  (command 's3-head-bucket
+    help: "Check if an S3 bucket exists"
+    profile-opt region-opt output-opt
+    (option 'bucket "--bucket" "-b"
+      help: "Bucket name (required)")))
+
+;; S3 Objects
+(def s3-list-objects-cmd
+  (command 's3-list-objects
+    help: "List objects in an S3 bucket"
+    profile-opt region-opt output-opt
+    (option 'bucket "--bucket" "-b"
+      help: "Bucket name (required)")
+    (option 'prefix "--prefix"
+      default: ""
+      help: "Filter by key prefix")
+    (option 'delimiter "--delimiter"
+      default: ""
+      help: "Grouping delimiter (e.g., /)")
+    (option 'max-keys "--max-keys"
+      default: ""
+      help: "Maximum number of keys to return")
+    (option 'start-after "--start-after"
+      default: ""
+      help: "Start listing after this key")))
+
+(def s3-get-object-cmd
+  (command 's3-get-object
+    help: "Download an S3 object"
+    profile-opt region-opt
+    (option 'bucket "--bucket" "-b"
+      help: "Bucket name (required)")
+    (option 'key "--key" "-k"
+      help: "Object key (required)")
+    (option 'outfile "--outfile" "-o"
+      default: ""
+      help: "Output file path (default: stdout)")))
+
+(def s3-put-object-cmd
+  (command 's3-put-object
+    help: "Upload an S3 object"
+    profile-opt region-opt output-opt
+    (option 'bucket "--bucket" "-b"
+      help: "Bucket name (required)")
+    (option 'key "--key" "-k"
+      help: "Object key (required)")
+    (option 'infile "--infile" "-i"
+      help: "Input file path (required)")
+    (option 'content-type "--content-type"
+      default: "application/octet-stream"
+      help: "Content type")))
+
+(def s3-delete-object-cmd
+  (command 's3-delete-object
+    help: "Delete an S3 object"
+    profile-opt region-opt output-opt
+    (option 'bucket "--bucket" "-b"
+      help: "Bucket name (required)")
+    (option 'key "--key" "-k"
+      help: "Object key (required)")))
+
+(def s3-head-object-cmd
+  (command 's3-head-object
+    help: "Get S3 object metadata"
+    profile-opt region-opt output-opt
+    (option 'bucket "--bucket" "-b"
+      help: "Bucket name (required)")
+    (option 'key "--key" "-k"
+      help: "Object key (required)")))
+
+(def s3-copy-object-cmd
+  (command 's3-copy-object
+    help: "Copy an S3 object (server-side)"
+    profile-opt region-opt output-opt
+    (option 'bucket "--bucket" "-b"
+      help: "Destination bucket name (required)")
+    (option 'key "--key" "-k"
+      help: "Destination object key (required)")
+    (option 'copy-source "--copy-source" "-s"
+      help: "Source as bucket/key (required)")))
+
 ;;; ---- Dispatch ----
 
 (def (main . args)
@@ -699,7 +809,19 @@
     delete-tags-cmd
     ;; Regions
     describe-regions-cmd
-    describe-availability-zones-cmd))
+    describe-availability-zones-cmd
+    ;; S3 Buckets
+    s3-list-buckets-cmd
+    s3-create-bucket-cmd
+    s3-delete-bucket-cmd
+    s3-head-bucket-cmd
+    ;; S3 Objects
+    s3-list-objects-cmd
+    s3-get-object-cmd
+    s3-put-object-cmd
+    s3-delete-object-cmd
+    s3-head-object-cmd
+    s3-copy-object-cmd))
 
 ;; Helper: parse tags string "Key1=Value1,Key2=Value2" into alist
 (def (parse-tags str)
@@ -715,6 +837,18 @@
 ;; Helper: non-empty string or #f
 (def (nonempty str)
   (and str (not (equal? str "")) str))
+
+;; Helper: read a file as u8vector
+(def (read-file-bytes path)
+  (let* ((p (open-input-file path))
+         (buf (make-u8vector 65536)))
+    (let loop ((chunks []))
+      (let (n (read-u8vector buf p))
+        (if (> n 0)
+          (loop (cons (subu8vector buf 0 n) chunks))
+          (begin
+            (close-port p)
+            (apply u8vector-append (reverse chunks))))))))
 
 ;; Main dispatch handler
 (def (gerbil-ec2-main cmd opt)
@@ -1003,4 +1137,59 @@
         ((describe-availability-zones)
          (format-output out
            (describe-availability-zones client all-zones: .?all)
-           columns: ["zoneName" "zoneState" "regionName"]))))))
+           columns: ["zoneName" "zoneState" "regionName"]))
+
+        ;; S3 Buckets
+        ((s3-list-buckets)
+         (let (s3 (make-s3-client* opt))
+           (format-output out (list-buckets s3)
+             columns: ["Name" "CreationDate"])))
+        ((s3-create-bucket)
+         (let (s3 (make-s3-client* opt))
+           (create-bucket s3 .bucket)
+           (displayln "Bucket created")))
+        ((s3-delete-bucket)
+         (let (s3 (make-s3-client* opt))
+           (delete-bucket s3 .bucket)
+           (displayln "Bucket deleted")))
+        ((s3-head-bucket)
+         (let (s3 (make-s3-client* opt))
+           (if (head-bucket s3 .bucket)
+             (displayln "Bucket exists")
+             (displayln "Bucket does not exist"))))
+
+        ;; S3 Objects
+        ((s3-list-objects)
+         (let (s3 (make-s3-client* opt))
+           (format-output out
+             (list-objects s3 .bucket
+               prefix: (nonempty .?prefix)
+               delimiter: (nonempty .?delimiter)
+               max-keys: (nonempty .?max-keys)
+               start-after: (nonempty .?start-after)))))
+        ((s3-get-object)
+         (let* ((s3 (make-s3-client* opt))
+                (data (get-object s3 .bucket .key)))
+           (if (nonempty .?outfile)
+             (let (p (open-output-file .outfile))
+               (write-u8vector data p)
+               (close-port p)
+               (displayln "Downloaded to " .outfile))
+             (write-u8vector data (current-output-port)))))
+        ((s3-put-object)
+         (let* ((s3 (make-s3-client* opt))
+                (data (read-file-bytes .infile)))
+           (put-object s3 .bucket .key data
+             content-type: .content-type)
+           (displayln "Uploaded " .infile " to s3://" .bucket "/" .key)))
+        ((s3-delete-object)
+         (let (s3 (make-s3-client* opt))
+           (delete-object s3 .bucket .key)
+           (displayln "Object deleted")))
+        ((s3-head-object)
+         (let (s3 (make-s3-client* opt))
+           (format-output out (head-object s3 .bucket .key))))
+        ((s3-copy-object)
+         (let (s3 (make-s3-client* opt))
+           (copy-object s3 .bucket .key .copy-source)
+           (displayln "Object copied")))))))
