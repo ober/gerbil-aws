@@ -1,0 +1,26 @@
+#!/usr/bin/env gxi
+(import :std/build-script)
+(defbuild-script
+  '("aws/creds"
+    "ec2/params"
+    "ec2/params-test"
+    "ec2/xml"
+    "ec2/xml-test"
+    "ec2/api"
+    "ec2/instances"
+    "ec2/images"
+    "ec2/security-groups"
+    "ec2/key-pairs"
+    "ec2/vpcs"
+    "ec2/subnets"
+    "ec2/volumes"
+    "ec2/snapshots"
+    "ec2/addresses"
+    "ec2/network-interfaces"
+    "ec2/route-tables"
+    "ec2/internet-gateways"
+    "ec2/nat-gateways"
+    "ec2/tags"
+    "ec2/regions"
+    "cli/format"
+    (exe: "cli/main" bin: "gerbil-ec2")))
