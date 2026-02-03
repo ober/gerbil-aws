@@ -22,5 +22,10 @@
     "ec2/nat-gateways"
     "ec2/tags"
     "ec2/regions"
+    "s3/xml"
+    "s3/xml-test"
+    "s3/api"
+    "s3/buckets"
+    "s3/objects"
     "cli/format"
     (exe: "cli/main" bin: "gerbil-ec2")))
