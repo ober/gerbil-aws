@@ -11,4 +11,4 @@ clean:
 	gerbil clean
 
 install:
-	cp $(BINARY) /usr/local/bin
+	sudo cp $(BINARY) /usr/local/bin
