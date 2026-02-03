@@ -1,7 +1,39 @@
 {
   "permissions": {
     "allow": [
-      "mcp__gerbil__*"
+      "mcp__gerbil__*",
+      "Bash(gerbil build*)",
+      "Bash(gerbil clean*)",
+      "Bash(gerbil test*)",
+      "Bash(GERBIL_LOADPATH=* gerbil *)",
+      "Bash(cd /home/jafourni/mine/gerbil-aws && *)",
+      "Bash(/home/jafourni/mine/aws-pricing-report/.gerbil/bin/*)",
+      "Bash(ls *)",
+      "Bash(head *)",
+      "Bash(cat *)"
+    ]
+  },
+  "hooks": {
+    "PreCompact": [
+      {
+        "matcher": "auto",
+        "hooks": [
+          {
+            "type": "agent",
+            "prompt": "Review the conversation for non-trivial Gerbil Scheme patterns, workarounds, API discoveries, or gotchas that were figured out through experimentation or debugging. For each one: (1) call gerbil_howto to check if it already exists, (2) if not, call gerbil_howto_add with a complete working code example, correct imports, and clear notes. Focus on: wrong assumptions that were corrected, arity/signature discoveries, compilation workarounds, and idiom patterns that required multiple attempts to get right. Skip trivial things any Scheme programmer would know.",
+            "timeout": 120
+          }
+        ]
+      },
+      {
+        "matcher": "manual",
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "Before compacting: save any unsaved Gerbil discoveries to the cookbook via gerbil_howto_add. Check gerbil_howto first to avoid duplicates."
+          }
+        ]
+      }
     ]
   }
 }

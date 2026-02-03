@@ -1,3 +1,7 @@
+## Build & Verification
+
+After modifying any `.ss` (Gerbil Scheme) source files, always run the build command and fix any errors before moving on. Common issues include: missing imports, wrong function names, and duplicate definitions.
+
 ## Gerbil MCP Tools — MANDATORY Usage
 
 When a Gerbil MCP server is available, you MUST use its tools extensively instead of guessing about Gerbil APIs, syntax, or behavior. Gerbil is a niche Scheme dialect with limited training data — always verify with live tools rather than relying on memory.
@@ -90,19 +94,95 @@ When a Gerbil MCP server is available, you MUST use its tools extensively instea
   - Optionally pass `cookbook_path` to write to a different file instead.
 - **`gerbil_file_summary`**: Quick structural overview of a `.ss` file — imports, exports, and definitions grouped by kind — without reading the entire file. Faster than `gerbil_load_file` when you only need the shape of a module.
 
-#### MANDATORY: Grow the Gerbil Cookbook
-
-When working with Gerbil code, you MUST proactively contribute recipes back to the MCP server:
-
-1. **Before writing Gerbil code**, search `gerbil_howto` to check if a recipe already exists.
-2. **After solving a non-trivial Gerbil task**, if the pattern is reusable and not already in the cookbook, save it with `gerbil_howto_add` (no `cookbook_path` needed — it writes to the server automatically). Good candidates:
-   - Gerbil idioms you verified with `gerbil_eval` or `gerbil_check_syntax` that weren't in the built-in recipes
-   - Workarounds for Gerbil quirks you discovered during the session
-   - Useful patterns for common modules or libraries
-   - Patterns that required reading documentation or trial-and-error to get right
-3. **Do not save** trivial one-liners, project-specific business logic, or recipes that duplicate existing ones. Focus on patterns that would help a future session avoid re-discovering the same solution.
-4. **Use good tags** — include enough keywords that a future search will find the recipe. Think about what someone would type when looking for this pattern.
-
 ### Key Principle
 
 **Never guess — always verify.** If you are unsure about any Gerbil API, symbol name, module export, function arity, or macro behavior, use the appropriate MCP tool to check before writing code. This is not optional — it is required practice for all Gerbil work in this repository.
+
+---
+
+## MANDATORY: Save What You Learn to the Gerbil Cookbook
+
+This is a **hard requirement**, not a suggestion. Gerbil is a niche language with limited training data. Every non-trivial pattern you discover and verify during a session is valuable knowledge that prevents future sessions from wasting time re-discovering the same thing.
+
+### You MUST call `gerbil_howto_add` whenever you:
+
+- Discover a working pattern through `gerbil_eval`, `gerbil_check_syntax`, or trial-and-error
+- Figure out the correct imports, function names, or calling conventions for a module that wasn't obvious
+- Find a workaround for a Gerbil quirk, gotcha, or undocumented behavior
+- Combine multiple standard library functions to accomplish a common task
+- Get something working that required reading source code or experimentation to figure out
+
+### Before saving, first check `gerbil_howto` to avoid duplicates.
+
+### Do NOT save:
+
+- Trivial one-liners that any Scheme programmer would know (e.g., `(+ 1 2)`)
+- Project-specific business logic that won't generalize
+- Recipes that already exist in the cookbook (check first!)
+
+### When saving, follow these rules:
+
+- **`id`**: Use kebab-case (e.g., `"read-csv-file"`, `"channel-fan-out"`)
+- **`tags`**: Include 4-6 search keywords. Think about what someone would type when looking for this pattern. Include the module name, the task, and alternative phrasings.
+- **`imports`**: List all required imports. Use `[]` if none needed.
+- **`code`**: Include a complete, working example — not a fragment. Someone should be able to copy-paste it.
+- **`notes`**: Explain any non-obvious details, gotchas, or alternatives.
+
+### This is not optional. If you solved a non-trivial Gerbil problem during this session and the pattern is reusable, you MUST save it before the session ends.
+
+---
+
+## Auto-Save Discoveries Before Compaction
+
+To prevent losing Gerbil discoveries when context compacts, add a `PreCompact` hook to `.claude/settings.json`. This automatically triggers cookbook saves before context is summarized.
+
+### Recommended Hook Configuration
+
+Add this to your project's `.claude/settings.json`:
+
+```json
+{
+  "hooks": {
+    "PreCompact": [
+      {
+        "matcher": "auto",
+        "hooks": [
+          {
+            "type": "agent",
+            "prompt": "Review the conversation for non-trivial Gerbil Scheme patterns, workarounds, API discoveries, or gotchas that were figured out through experimentation or debugging. For each one: (1) call gerbil_howto to check if it already exists, (2) if not, call gerbil_howto_add with a complete working code example, correct imports, and clear notes. Focus on: wrong assumptions that were corrected, arity/signature discoveries, compilation workarounds, and idiom patterns that required multiple attempts to get right. Skip trivial things any Scheme programmer would know.",
+            "timeout": 120
+          }
+        ]
+      },
+      {
+        "matcher": "manual",
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "Before compacting: save any unsaved Gerbil discoveries to the cookbook via gerbil_howto_add. Check gerbil_howto first to avoid duplicates."
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+### How It Works
+
+- **Auto compaction** (`matcher: "auto"`): When the context window fills up and Claude Code triggers automatic compaction, an agent subagent is spawned that reviews the conversation, checks existing recipes via `gerbil_howto`, and saves new discoveries via `gerbil_howto_add`. The agent has full MCP tool access.
+- **Manual compaction** (`matcher: "manual"`): When you run `/compact`, a prompt reminder is injected so Claude saves discoveries before summarizing.
+
+### Why This Matters
+
+Gerbil is a niche language with limited training data. Long sessions often discover critical patterns (e.g., `hash-get` is strictly 2-arity, `call-with-getopt` changed its API in v0.19+, `for/in-hash` fails during compilation). Without this hook, these discoveries are lost when context compacts, and future sessions waste tokens re-discovering the same things.
+
+---
+
+## Workflow Conventions
+
+When implementing new features, always complete the documentation update in the same session. Document non-trivial solutions as howto recipes in the cookbook system.
+
+## Language-Specific Notes
+
+When editing Gerbil Scheme, be careful with function naming conventions (e.g., `md5` not `md5sum`) and avoid introducing duplicate definitions across modules.

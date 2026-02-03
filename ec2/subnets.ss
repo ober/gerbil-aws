@@ -3,7 +3,7 @@
 
 (import :gerbil-aws/ec2/api
         :gerbil-aws/ec2/params)
-(export describe-subnets create-subnet delete-subnet)
+(export describe-subnets create-subnet delete-subnet modify-subnet-attribute)
 
 (def (describe-subnets client
        subnet-ids: (subnet-ids [])
@@ -30,4 +30,14 @@
 (def (delete-subnet client subnet-id)
   (ec2-action client "DeleteSubnet"
     [["SubnetId" :: subnet-id]])
+  (void))
+
+(def (modify-subnet-attribute client subnet-id
+       map-public-ip-on-launch: (map-public-ip-on-launch #f))
+  (ec2-action client "ModifySubnetAttribute"
+    (params-merge
+      [["SubnetId" :: subnet-id]]
+      (if (not (eq? map-public-ip-on-launch #f))
+        [["MapPublicIpOnLaunch.Value" :: (if map-public-ip-on-launch "true" "false")]]
+        [])))
   (void))

@@ -3,7 +3,8 @@
 
 (import :gerbil-aws/ec2/api
         :gerbil-aws/ec2/params)
-(export describe-volumes create-volume delete-volume attach-volume detach-volume)
+(export describe-volumes create-volume delete-volume attach-volume detach-volume
+        modify-volume describe-volume-status)
 
 (def (describe-volumes client
        volume-ids: (volume-ids [])
@@ -57,3 +58,28 @@
       (if instance-id [["InstanceId" :: instance-id]] [])
       (if device [["Device" :: device]] [])
       (if force [["Force" :: "true"]] []))))
+
+(def (modify-volume client volume-id
+       size: (size #f)
+       volume-type: (volume-type #f)
+       iops: (iops #f)
+       throughput: (throughput #f))
+  (ec2-action/hash client "ModifyVolume"
+    (params-merge
+      [["VolumeId" :: volume-id]]
+      (if size [["Size" :: size]] [])
+      (if volume-type [["VolumeType" :: volume-type]] [])
+      (if iops [["Iops" :: iops]] [])
+      (if throughput [["Throughput" :: throughput]] []))))
+
+(def (describe-volume-status client
+       volume-ids: (volume-ids [])
+       filters: (filters [])
+       max-results: (max-results #f)
+       next-token: (next-token #f))
+  (ec2-action/items client "DescribeVolumeStatus" 'volumeStatusSet
+    (params-merge
+      (ec2-param-list "VolumeId" volume-ids)
+      (ec2-param-filters filters)
+      (if max-results [["MaxResults" :: max-results]] [])
+      (if next-token [["NextToken" :: next-token]] []))))

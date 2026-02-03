@@ -3,7 +3,7 @@
 
 (import :gerbil-aws/ec2/api
         :gerbil-aws/ec2/params)
-(export describe-vpcs create-vpc delete-vpc)
+(export describe-vpcs create-vpc delete-vpc modify-vpc-attribute)
 
 (def (describe-vpcs client
        vpc-ids: (vpc-ids [])
@@ -30,4 +30,18 @@
 (def (delete-vpc client vpc-id)
   (ec2-action client "DeleteVpc"
     [["VpcId" :: vpc-id]])
+  (void))
+
+(def (modify-vpc-attribute client vpc-id
+       enable-dns-support: (enable-dns-support #f)
+       enable-dns-hostnames: (enable-dns-hostnames #f))
+  (ec2-action client "ModifyVpcAttribute"
+    (params-merge
+      [["VpcId" :: vpc-id]]
+      (if (not (eq? enable-dns-support #f))
+        [["EnableDnsSupport.Value" :: (if enable-dns-support "true" "false")]]
+        [])
+      (if (not (eq? enable-dns-hostnames #f))
+        [["EnableDnsHostnames.Value" :: (if enable-dns-hostnames "true" "false")]]
+        [])))
   (void))

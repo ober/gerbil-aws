@@ -5,7 +5,8 @@
         :gerbil-aws/ec2/params)
 (export describe-instances run-instances start-instances stop-instances
         terminate-instances reboot-instances
-        describe-instance-status get-console-output)
+        describe-instance-status get-console-output
+        modify-instance-attribute describe-instance-types)
 
 (def (describe-instances client
        instance-ids: (instance-ids [])
@@ -79,3 +80,37 @@
     (params-merge
       [["InstanceId" :: instance-id]]
       (if latest [["Latest" :: "true"]] []))))
+
+(def (modify-instance-attribute client instance-id
+       instance-type: (instance-type #f)
+       source-dest-check: (source-dest-check #f)
+       disable-api-termination: (disable-api-termination #f)
+       ebs-optimized: (ebs-optimized #f)
+       user-data: (user-data #f))
+  (ec2-action client "ModifyInstanceAttribute"
+    (params-merge
+      [["InstanceId" :: instance-id]]
+      (if instance-type [["InstanceType.Value" :: instance-type]] [])
+      (if (not (eq? source-dest-check #f))
+        [["SourceDestCheck.Value" :: (if source-dest-check "true" "false")]]
+        [])
+      (if (not (eq? disable-api-termination #f))
+        [["DisableApiTermination.Value" :: (if disable-api-termination "true" "false")]]
+        [])
+      (if (not (eq? ebs-optimized #f))
+        [["EbsOptimized.Value" :: (if ebs-optimized "true" "false")]]
+        [])
+      (if user-data [["UserData.Value" :: user-data]] [])))
+  (void))
+
+(def (describe-instance-types client
+       instance-types: (instance-types [])
+       filters: (filters [])
+       max-results: (max-results #f)
+       next-token: (next-token #f))
+  (ec2-action/items client "DescribeInstanceTypes" 'instanceTypeSet
+    (params-merge
+      (ec2-param-list "InstanceType" instance-types)
+      (ec2-param-filters filters)
+      (if max-results [["MaxResults" :: max-results]] [])
+      (if next-token [["NextToken" :: next-token]] []))))

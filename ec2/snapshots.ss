@@ -3,7 +3,7 @@
 
 (import :gerbil-aws/ec2/api
         :gerbil-aws/ec2/params)
-(export describe-snapshots create-snapshot delete-snapshot)
+(export describe-snapshots create-snapshot delete-snapshot copy-snapshot)
 
 (def (describe-snapshots client
        snapshot-ids: (snapshot-ids [])
@@ -31,3 +31,19 @@
   (ec2-action client "DeleteSnapshot"
     [["SnapshotId" :: snapshot-id]])
   (void))
+
+(def (copy-snapshot client
+       source-snapshot-id: source-snapshot-id
+       source-region: source-region
+       description: (description #f)
+       encrypted: (encrypted #f)
+       tag-specifications: (tag-specifications #f))
+  (ec2-action/hash client "CopySnapshot"
+    (params-merge
+      [["SourceSnapshotId" :: source-snapshot-id]
+       ["SourceRegion" :: source-region]]
+      (if description [["Description" :: description]] [])
+      (if encrypted [["Encrypted" :: "true"]] [])
+      (if tag-specifications
+        (ec2-param-tags "TagSpecification" 1 "snapshot" tag-specifications)
+        []))))

@@ -1,4 +1,4 @@
-BINARY = .gerbil/bin/gerbil-ec2
+BINARY = .gerbil/bin/gerbil-aws
 OPENSSL_RPATH = /home/linuxbrew/.linuxbrew/opt/openssl@3/lib
 
 .PHONY: build clean
