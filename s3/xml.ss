@@ -102,7 +102,7 @@
       ((not (pair? node)) #f)
       ;; Skip metadata nodes entirely
       ((and (pair? node) (symbol? (car node))
-            (memq (car node) '(@ *NAMESPACES*)))
+            (memq (car node) '(@ *NAMESPACES* *PI*)))
        #f)
       ;; Found a real element
       ((and (pair? node) (symbol? (car node))
