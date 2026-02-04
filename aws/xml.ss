@@ -12,12 +12,17 @@
   (read-xml body namespaces: namespaces))
 
 ;; Strip namespace prefix from a symbol (ns:foo -> foo)
+;; Finds the LAST colon to handle full URI namespace prefixes
+;; e.g. http://sts.amazonaws.com/doc/2011-06-15/:Account -> Account
 (def (strip-ns sym)
-  (let (s (symbol->string sym))
-    (let (pos (string-contains s ":"))
-      (if pos
-        (string->symbol (substring s (+ pos 1) (string-length s)))
-        sym))))
+  (let* ((s (symbol->string sym))
+         (len (string-length s)))
+    (let loop ((i (- len 1)))
+      (cond
+        ((< i 0) sym)
+        ((char=? (string-ref s i) #\:)
+         (string->symbol (substring s (+ i 1) len)))
+        (else (loop (- i 1)))))))
 
 ;; Get text content of an SXML element
 ;; (tag "text") -> "text"
@@ -56,8 +61,8 @@
     ((string? element) element)
     ;; Not a proper element
     ((not (pair? element)) #f)
-    ;; Skip @-attributes and *TOP* wrapper
-    ((memq (car element) '(@ *TOP* *NAMESPACES*)) #f)
+    ;; Skip @-attributes, *TOP* wrapper, and processing instructions
+    ((memq (car element) '(@ *TOP* *NAMESPACES* *PI*)) #f)
     ;; Leaf element with text: (tag "text")
     ((sxml-text element) => (lambda (text) text))
     ;; Empty element: (tag)
@@ -103,7 +108,7 @@
       ((not (pair? node)) #f)
       ;; Skip metadata nodes entirely
       ((and (pair? node) (symbol? (car node))
-            (memq (car node) '(@ *NAMESPACES*)))
+            (memq (car node) '(@ *NAMESPACES* *PI*)))
        #f)
       ;; Found a real element
       ((and (pair? node) (symbol? (car node))
