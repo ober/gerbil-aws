@@ -55,6 +55,10 @@
         ;; CloudFormation
         :gerbil-aws/cfn/api
         :gerbil-aws/cfn/stacks
+        ;; SSM
+        :gerbil-aws/ssm/api
+        :gerbil-aws/ssm/operations
+        :gerbil-aws/ssm/session
         ;; CLI
         :gerbil-aws/cli/format)
 (export main)
@@ -189,6 +193,11 @@
 (def (make-cfn-client opt)
   (let-hash opt
     (CFNClient profile: .?profile region: .?region)))
+
+;; Create SSM client from CLI options hash
+(def (make-ssm-client* opt)
+  (let-hash opt
+    (SSMClient profile: .?profile region: .?region)))
 
 ;;; ---- Command Definitions ----
 
@@ -1700,6 +1709,19 @@
     (option 'stack-name "--stack-name" "-s"
       help: "Stack name (required)")))
 
+;; === SSM ===
+(def ssm-start-session-cmd
+  (command 'ssm-start-session
+    help: "Start an interactive SSM session to an EC2 instance"
+    profile-opt region-opt
+    (argument 'target
+      help: "Instance ID (e.g. i-0123456789abcdef0)")))
+
+(def ssm-describe-instance-information-cmd
+  (command 'ssm-describe-instance-information
+    help: "List SSM-managed instances"
+    profile-opt region-opt output-opt))
+
 ;;; ---- Dispatch ----
 
 (def (main . args)
@@ -1890,7 +1912,10 @@
     cfn-describe-stack-resources-cmd
     cfn-get-template-cmd
     cfn-validate-template-cmd
-    cfn-list-stack-resources-cmd))
+    cfn-list-stack-resources-cmd
+    ;; SSM
+    ssm-start-session-cmd
+    ssm-describe-instance-information-cmd))
 
 ;; Main dispatch handler
 (def (gerbil-aws-main cmd opt)
@@ -2746,7 +2771,15 @@
         ((cfn-list-stack-resources)
          (let (client (make-cfn-client opt))
            (format-output out
-             (list-stack-resources client .stack-name))))))))
+             (list-stack-resources client .stack-name))))
+        ;; === SSM ===
+        ((ssm-start-session)
+         (let (client (make-ssm-client* opt))
+           (ssm-connect client .target)))
+        ((ssm-describe-instance-information)
+         (let (client (make-ssm-client* opt))
+           (format-output out
+             (ssm-list-instances client))))))))
 
 (def (string-join strs sep)
   (if (null? strs) ""

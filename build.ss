@@ -61,5 +61,8 @@
     "compute-optimizer/operations"
     "cost-optimization-hub/api"
     "cost-optimization-hub/operations"
+    "ssm/api"
+    "ssm/operations"
+    "ssm/session"
     "cli/format"
     (exe: "cli/main" bin: "gerbil-aws")))
