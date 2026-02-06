@@ -277,7 +277,7 @@
 
 (def (ws-send-text session text)
   (WebSocket-send (ssm-session-ws session)
-                  (make-message (string->bytes text) 'text #f)))
+                  (make-message text 'text #f)))
 
 (def (ws-recv session)
   (try (WebSocket-recv (ssm-session-ws session))
@@ -379,6 +379,11 @@
     (cond
       ;; Terminal output
       ((or (= ptype PAYLOAD-OUTPUT) (= ptype PAYLOAD-STDERR))
+       ;; If handshake never arrived, mark session ready on first output
+       (unless (ssm-session-terminal-set? session)
+         (ssm-session-terminal-set?-set! session #t)
+         (let ((sz (get-terminal-size)))
+           (send-resize session (car sz) (cdr sz))))
        (write-subu8vector payload 0 (u8vector-length payload) (current-output-port))
        (force-output (current-output-port)))
       ;; Handshake request
@@ -471,12 +476,17 @@
   "Connect to an EC2 instance via SSM Session Manager.
    client: an SSMClient, target: instance ID string."
   (displayln (format "Starting session to ~a..." target))
-  (let ((resp (start-session client target)))
-    (unless (and (hash-table? resp)
+  (let ((resp (try (start-session client target)
+                (catch (Error? e)
+                  (fprintf (current-error-port) "Error: ~a\n" (Error-message e))
+                  #f))))
+    (unless (and resp
+                 (hash-table? resp)
                  (hash-get resp "StreamUrl")
                  (hash-get resp "TokenValue"))
-      (error "Failed to start SSM session" target
-             (and (hash-table? resp) resp)))
+      (when (and resp (hash-table? resp))
+        (fprintf (current-error-port) "Error: Failed to start SSM session to ~a\n" target))
+      (exit 1))
 
     (let ((stream-url (hash-ref resp "StreamUrl"))
           (token-value (hash-ref resp "TokenValue"))

@@ -21,5 +21,5 @@ clean:
 	rm -f $(GLOBAL_LIB)
 	rm -f $(GLOBAL_STATIC)/gerbil-aws__*
 
-install:
+install: build
 	sudo cp $(BINARY) /usr/local/bin
