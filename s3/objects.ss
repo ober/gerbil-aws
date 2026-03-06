@@ -1,10 +1,9 @@
 ;;; -*- Gerbil -*-
 ;;; S3 Object operations
 
-(import :std/net/request
+(import :gerbil-aws/s3/api
         :std/crypto/digest
         :std/text/base64
-        :gerbil-aws/s3/api
         (only-in :gerbil-aws/s3/xml xml-escape))
 (export list-objects get-object put-object delete-object
         head-object copy-object
@@ -44,8 +43,8 @@
                 verb: 'GET
                 bucket: bucket-name
                 key: key))
-         (data (request-content req)))
-    (request-close req)
+         (data (resp-content req)))
+    (resp-close req)
     data))
 
 ;; Upload an object
@@ -58,7 +57,7 @@
               key: key
               body: data
               content-type: content-type))
-    (request-close req)
+    (resp-close req)
     (void)))
 
 ;; Delete an object
@@ -67,7 +66,7 @@
               verb: 'DELETE
               bucket: bucket-name
               key: key))
-    (request-close req)
+    (resp-close req)
     (void)))
 
 ;; Get object metadata (HEAD request)
@@ -77,8 +76,8 @@
                 verb: 'HEAD
                 bucket: bucket-name
                 key: key))
-         (headers (request-headers req)))
-    (request-close req)
+         (headers (resp-headers req)))
+    (resp-close req)
     (let (ht (make-hash-table))
       (for-each (lambda (h) (hash-put! ht (car h) (cdr h))) headers)
       ht)))
@@ -91,7 +90,7 @@
               bucket: bucket-name
               key: key
               extra-headers: [["x-amz-copy-source" :: source]]))
-    (request-close req)
+    (resp-close req)
     (void)))
 
 ;; Batch delete objects
@@ -115,7 +114,7 @@
                 body: body
                 content-type: "application/xml"
                 extra-headers: [["Content-MD5" :: (u8vector->base64-string md5-hash)]])))
-    (request-close req)
+    (resp-close req)
     (void)))
 
 ;; List object versions in a bucket
@@ -165,7 +164,7 @@
                 query: [["tagging" :: ""]]
                 body: body
                 content-type: "application/xml")))
-    (request-close req)
+    (resp-close req)
     (void)))
 
 ;; Delete object tagging
@@ -175,7 +174,7 @@
               bucket: bucket-name
               key: key
               query: [["tagging" :: ""]]))
-    (request-close req)
+    (resp-close req)
     (void)))
 
 ;; List in-progress multipart uploads
@@ -206,5 +205,5 @@
               bucket: bucket-name
               key: key
               query: [["uploadId" :: upload-id]]))
-    (request-close req)
+    (resp-close req)
     (void)))

@@ -28,6 +28,7 @@
     "ec2/launch-templates"
     "s3/xml"
     "s3/xml-test"
+    "s3/connection"
     "s3/api"
     "s3/buckets"
     "s3/objects"

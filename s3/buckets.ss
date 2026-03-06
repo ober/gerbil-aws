@@ -1,8 +1,7 @@
 ;;; -*- Gerbil -*-
 ;;; S3 Bucket operations
 
-(import :std/net/request
-        :gerbil-aws/s3/api
+(import :gerbil-aws/s3/api
         (only-in :gerbil-aws/s3/xml xml-escape))
 (export list-buckets create-bucket delete-bucket head-bucket
         get-bucket-location
@@ -42,7 +41,7 @@
                   bucket: bucket-name
                   body: body
                   content-type: (and body "application/xml"))))
-      (request-close req)
+      (resp-close req)
       (void))))
 
 ;; Delete a bucket (must be empty)
@@ -50,7 +49,7 @@
   (let (req (s3-request/check client
               verb: 'DELETE
               bucket: bucket-name))
-    (request-close req)
+    (resp-close req)
     (void)))
 
 ;; Check if a bucket exists
@@ -59,8 +58,8 @@
   (let* ((req (s3-request client
                 verb: 'HEAD
                 bucket: bucket-name))
-         (status (request-status req)))
-    (request-close req)
+         (status (resp-status req)))
+    (resp-close req)
     (and (fx>= status 200) (fx< status 300))))
 
 ;; Get bucket location
@@ -89,7 +88,7 @@
                 query: [["versioning" :: ""]]
                 body: body
                 content-type: "application/xml")))
-    (request-close req)
+    (resp-close req)
     (void)))
 
 ;; Get bucket tagging
@@ -116,7 +115,7 @@
                 query: [["tagging" :: ""]]
                 body: body
                 content-type: "application/xml")))
-    (request-close req)
+    (resp-close req)
     (void)))
 
 ;; Delete bucket tagging
@@ -125,7 +124,7 @@
               verb: 'DELETE
               bucket: bucket-name
               query: [["tagging" :: ""]]))
-    (request-close req)
+    (resp-close req)
     (void)))
 
 ;; Get bucket policy (returns JSON string)
@@ -134,8 +133,8 @@
                 verb: 'GET
                 bucket: bucket-name
                 query: [["policy" :: ""]]))
-         (content (request-text req)))
-    (request-close req)
+         (content (resp-text req)))
+    (resp-close req)
     content))
 
 ;; Put bucket policy
@@ -147,7 +146,7 @@
               query: [["policy" :: ""]]
               body: policy
               content-type: "application/json"))
-    (request-close req)
+    (resp-close req)
     (void)))
 
 ;; Delete bucket policy
@@ -156,5 +155,5 @@
               verb: 'DELETE
               bucket: bucket-name
               query: [["policy" :: ""]]))
-    (request-close req)
+    (resp-close req)
     (void)))
