@@ -2,7 +2,8 @@
 ;;; S3 Bucket operations
 
 (import :std/net/request
-        :gerbil-aws/s3/api)
+        :gerbil-aws/s3/api
+        (only-in :gerbil-aws/s3/xml xml-escape))
 (export list-buckets create-bucket delete-bucket head-bucket
         get-bucket-location
         get-bucket-versioning put-bucket-versioning
@@ -103,7 +104,9 @@
 (def (put-bucket-tagging client bucket-name tags)
   (let* ((tag-xml (apply string-append
                     (map (lambda (t)
-                           (string-append "<Tag><Key>" (car t) "</Key><Value>" (cdr t) "</Value></Tag>"))
+                           (string-append "<Tag><Key>" (xml-escape (car t))
+                                          "</Key><Value>" (xml-escape (cdr t))
+                                          "</Value></Tag>"))
                          tags)))
          (body (string-append
                  "<Tagging><TagSet>" tag-xml "</TagSet></Tagging>"))

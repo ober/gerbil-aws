@@ -114,6 +114,11 @@
          (http-get url headers: headers params: query))
         ((PUT)
          (http-put url headers: headers params: query data: (or body-bytes "")))
+        ((POST)
+         ;; Use http-any instead of http-post: http-post form-encodes params
+         ;; as the body, which would clobber our XML/binary body.
+         ;; http-any appends params to the URL and sends data as body.
+         (http-any 'POST url headers: headers params: query data: (or body-bytes "")))
         ((DELETE)
          (http-delete url headers: headers params: query))
         ((HEAD)

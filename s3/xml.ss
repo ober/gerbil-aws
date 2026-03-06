@@ -5,7 +5,8 @@
 (import :std/markup/xml
         :std/iter
         (only-in :std/srfi/13 string-prefix? string-contains))
-(export s3-parse-xml sxml->hash strip-ns sxml-items sxml-text s3-response->hash)
+(export s3-parse-xml sxml->hash strip-ns sxml-items sxml-text s3-response->hash
+        xml-escape)
 
 ;; S3 namespace mapping
 (def s3-namespaces
@@ -115,3 +116,21 @@
            #f
            (or (find (car children))
                (loop (cdr children)))))))))
+
+;; Escape a string for safe inclusion in XML text content
+;; Handles &, <, >, ", and '
+(def (xml-escape str)
+  (let loop ((i 0) (acc []))
+    (if (fx>= i (string-length str))
+      (apply string-append (reverse acc))
+      (let ((ch (string-ref str i))
+            (next (fx+ i 1)))
+        (loop next
+              (cons (case ch
+                      ((#\&) "&amp;")
+                      ((#\<) "&lt;")
+                      ((#\>) "&gt;")
+                      ((#\") "&quot;")
+                      ((#\') "&apos;")
+                      (else (string ch)))
+                    acc))))))

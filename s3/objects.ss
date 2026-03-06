@@ -4,7 +4,8 @@
 (import :std/net/request
         :std/crypto/digest
         :std/text/base64
-        :gerbil-aws/s3/api)
+        :gerbil-aws/s3/api
+        (only-in :gerbil-aws/s3/xml xml-escape))
 (export list-objects get-object put-object delete-object
         head-object copy-object
         delete-objects list-object-versions
@@ -98,7 +99,7 @@
 (def (delete-objects client bucket-name keys quiet: (quiet #t))
   (let* ((objects-xml (apply string-append
                         (map (lambda (k)
-                               (string-append "<Object><Key>" k "</Key></Object>"))
+                               (string-append "<Object><Key>" (xml-escape k) "</Key></Object>"))
                              keys)))
          (body (string-append
                  "<Delete>"
@@ -151,7 +152,9 @@
 (def (put-object-tagging client bucket-name key tags)
   (let* ((tag-xml (apply string-append
                     (map (lambda (t)
-                           (string-append "<Tag><Key>" (car t) "</Key><Value>" (cdr t) "</Value></Tag>"))
+                           (string-append "<Tag><Key>" (xml-escape (car t))
+                                          "</Key><Value>" (xml-escape (cdr t))
+                                          "</Value></Tag>"))
                          tags)))
          (body (string-append
                  "<Tagging><TagSet>" tag-xml "</TagSet></Tagging>"))
